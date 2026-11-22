@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crop Disease Detection</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card">
+    <h1>Crop Disease Detection</h1>
+    <p>EfficientNetB0 এবং SVM ব্যবহার করে ফসলের পাতার রোগ শনাক্তকরণ ওয়েব অ্যাপ্লিকেশন।</p>
+
+    <div class="preview-box">
+      <input type="file" id="leafInput" accept="image/*" />
+      <img id="previewImg" alt="Uploaded leaf preview" />
+    </div>
+
+    <div class="note">
+      <strong>স্ট্যাটাস:</strong> Static ওয়েব ইন্টারফেস চালু আছে। ছবি প্রিভিউ দেখা যাচ্ছে; পূর্ণাঙ্গ মডেল প্রেডিকশন যুক্ত করতে ব্যাকএন্ড/মডেল ইন্টিগ্রেশন সংযোগ করতে হবে।
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
