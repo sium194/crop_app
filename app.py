@@ -15,7 +15,7 @@ def predict_crop_disease(image):
     if image is None:
         return "অনুগ্রহ করে একটি পাতার ছবি আপলোড করুন।"
     img = image.convert("RGB").resize(IMG_SIZE)
-    arr = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
+    arr = np.expand_dims(np.array(img, dtype=np.float32) / 255.0, axis=0)
     features = session.run(None, {"input": arr})[0]
     pred = svm_model.predict(features)[0]
     try:
