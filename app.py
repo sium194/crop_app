@@ -17,7 +17,7 @@ def predict_crop_disease(image):
     img = image.convert("RGB").resize(IMG_SIZE)
     arr = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
     features = session.run(None, {"input": arr})[0]
-        pred = svm_model.predict(features)[0]
+    pred = svm_model.predict(features)[0]
     try:
         label = class_names[int(pred)]
     except (ValueError, TypeError):
