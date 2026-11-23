@@ -1,6 +1,6 @@
 gradio
+onnxruntime
 scikit-learn
 numpy
 pillow
-tensorflow
 joblib
