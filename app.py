@@ -7,11 +7,9 @@ from PIL import Image
 import gradio as gr
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
-os.makedirs(MODELS_DIR, exist_ok=True)
 
 GDRIVE_FILE_ID = "1Aioeu070wGZz1opgAzXshTWL3rqK58_Y"
-SVM_MODEL_PATH = os.path.join(MODELS_DIR, "crop_disease_svm.pkl")
+SVM_MODEL_PATH = os.path.join(BASE_DIR, "crop_disease_svm.pkl")
 
 
 def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
@@ -33,12 +31,12 @@ def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
 ensure_svm_model_downloaded(SVM_MODEL_PATH, GDRIVE_FILE_ID)
 
 ort_session = ort.InferenceSession(
-    os.path.join(MODELS_DIR, "efficientnet.onnx"),
+    os.path.join(BASE_DIR, "efficientnet.onnx"),
     providers=["CPUExecutionProvider"],
 )
 input_name = ort_session.get_inputs()[0].name
 svm_pipeline = joblib.load(SVM_MODEL_PATH)
-class_names = joblib.load(os.path.join(MODELS_DIR, "class_names.pkl"))
+class_names = joblib.load(os.path.join(BASE_DIR, "class_names.pkl"))
 
 
 def predict_crop(img: Image.Image) -> dict:
