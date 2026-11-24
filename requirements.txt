@@ -1,6 +1,6 @@
-gradio
-onnxruntime
-scikit-learn
-numpy
-pillow
-joblib
+gradio>=4.44.1
+pillow>=10.4.0
+numpy>=1.26.4
+onnxruntime>=1.20.0
+scikit-learn>=1.5.2
+joblib>=1.4.2
