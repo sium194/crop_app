@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 import urllib.request
 import joblib
 import numpy as np
@@ -12,20 +14,50 @@ GDRIVE_FILE_ID = "1Aioeu070wGZz1opgAzXshTWL3rqK58_Y"
 SVM_MODEL_PATH = os.path.join(BASE_DIR, "crop_disease_svm.pkl")
 
 
+def _looks_like_html(file_path: str) -> bool:
+  try:
+    with open(file_path, "rb") as f:
+      head = f.read(512).lstrip().lower()
+    return head.startswith(b"<!doctype html") or head.startswith(b"<html")
+  except OSError:
+    return True
+
+
 def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
-  download_url = f"https://drive.google.com/uc?export=download&confirm=t&id={file_id}"
-  req = urllib.request.Request(
-      download_url,
-      headers={"User-Agent": "Mozilla/5.0"},
-  )
-  with urllib.request.urlopen(req, timeout=180) as response, open(
-      dest_path, "wb"
-  ) as out_file:
-    while True:
-      chunk = response.read(1024 * 1024)
-      if not chunk:
-        break
-      out_file.write(chunk)
+  if os.path.exists(dest_path) and os.path.getsize(dest_path) > 10 * 1024 * 1024 and not _looks_like_html(dest_path):
+    return
+
+  # প্রথমে gdown দিয়ে চেষ্টা করা হবে
+  cmd = [
+      sys.executable,
+      "-m",
+      "gdown",
+      "--fuzzy",
+      f"https://drive.google.com/uc?id={file_id}",
+      "-O",
+      dest_path,
+  ]
+  subprocess.run(cmd, check=False)
+
+  if not os.path.exists(dest_path) or _looks_like_html(dest_path):
+    download_url = f"https://drive.google.com/uc?export=download&confirm=t&id={file_id}"
+    req = urllib.request.Request(
+        download_url,
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    with urllib.request.urlopen(req, timeout=180) as response, open(
+        dest_path, "wb"
+    ) as out_file:
+      while True:
+        chunk = response.read(1024 * 1024)
+        if not chunk:
+          break
+        out_file.write(chunk)
+
+  if _looks_like_html(dest_path):
+    raise RuntimeError(
+        "Google Drive থেকে HTML পেজ ডাউনলোড হয়েছে; ফাইলের শেয়ারিং 'Anyone with the link' (Viewer) আছে কি না যাচাই করুন।"
+    )
 
 
 ensure_svm_model_downloaded(SVM_MODEL_PATH, GDRIVE_FILE_ID)
