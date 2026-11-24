@@ -24,10 +24,13 @@ def _looks_like_html(file_path: str) -> bool:
 
 
 def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
-  if os.path.exists(dest_path) and os.path.getsize(dest_path) > 10 * 1024 * 1024 and not _looks_like_html(dest_path):
+  if (
+      os.path.exists(dest_path)
+      and os.path.getsize(dest_path) > 10 * 1024 * 1024
+      and not _looks_like_html(dest_path)
+  ):
     return
 
-  # প্রথমে gdown দিয়ে চেষ্টা করা হবে
   cmd = [
       sys.executable,
       "-m",
@@ -40,14 +43,17 @@ def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
   subprocess.run(cmd, check=False)
 
   if not os.path.exists(dest_path) or _looks_like_html(dest_path):
-    download_url = f"https://drive.google.com/uc?export=download&confirm=t&id={file_id}"
+    download_url = (
+        f"https://drive.google.com/uc?export=download&confirm=t&id={file_id}"
+    )
     req = urllib.request.Request(
         download_url,
         headers={"User-Agent": "Mozilla/5.0"},
     )
-    with urllib.request.urlopen(req, timeout=180) as response, open(
-        dest_path, "wb"
-    ) as out_file:
+    with (
+        urllib.request.urlopen(req, timeout=180) as response,
+        open(dest_path, "wb") as out_file,
+    ):
       while True:
         chunk = response.read(1024 * 1024)
         if not chunk:
@@ -56,7 +62,8 @@ def ensure_svm_model_downloaded(dest_path: str, file_id: str) -> None:
 
   if _looks_like_html(dest_path):
     raise RuntimeError(
-        "Google Drive থেকে HTML পেজ ডাউনলোড হয়েছে; ফাইলের শেয়ারিং 'Anyone with the link' (Viewer) আছে কি না যাচাই করুন।"
+        "Google Drive থেকে HTML পেজ ডাউনলোড হয়েছে; ফাইলের শেয়ারিং 'Anyone"
+        " with the link' (Viewer) আছে কি না যাচাই করুন।"
     )
 
 
@@ -74,12 +81,20 @@ class_names = joblib.load(os.path.join(BASE_DIR, "class_names.pkl"))
 def predict_crop(img: Image.Image) -> dict:
   if img is None:
     return {}
-  resized = img.convert("RGB").resize((224, 224))
-  arr = np.asarray(resized, dtype=np.float32) / 255.0
-  inp = np.expand_dims(arr, axis=0)
-  features = ort_session.run(None, {input_name: inp})[0]
-  probs = svm_pipeline.predict_proba(features)[0]
-  return {str(class_names[i]): float(probs[i]) for i in range(len(class_names))}
+  try:
+    resized = img.convert("RGB").resize((224, 224))
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    inp = np.expand_dims(arr, axis=0)
+    features = ort_session.run(None, {input_name: inp})[0]
+    features = np.asarray(features, dtype=np.float32)
+    if features.ndim == 1:
+      features = np.expand_dims(features, axis=0)
+    probs = svm_pipeline.predict_proba(features)[0]
+    return {
+        str(class_names[i]): float(probs[i]) for i in range(len(class_names))
+    }
+  except Exception as e:
+    return {"Error": 0.0, str(e)[:120]: 1.0}
 
 
 demo = gr.Interface(
