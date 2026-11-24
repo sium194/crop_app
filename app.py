@@ -1,37 +1,41 @@
 import os
-import gradio as gr
 import joblib
 import numpy as np
 import onnxruntime as ort
 from PIL import Image
+import gradio as gr
 
-svm_model = joblib.load("crop_disease_svm.pkl")
-class_names = joblib.load("class_names.pkl")
-session = ort.InferenceSession("efficientnet.onnx",
-                               providers=["CPUExecutionProvider"])
-IMG_SIZE = (224, 224)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
 
-def predict_crop_disease(image):
-    if image is None:
-        return "অনুগ্রহ করে একটি পাতার ছবি আপলোড করুন।"
-    img = image.convert("RGB").resize(IMG_SIZE)
-    arr = np.expand_dims(np.array(img, dtype=np.float32) / 255.0, axis=0)
-    features = session.run(None, {"input": arr})[0]
-    pred = svm_model.predict(features)[0]
-    try:
-        label = class_names[int(pred)]
-    except (ValueError, TypeError):
-        label = str(pred)
-    return f"Predicted Class: {label}"
+ort_session = ort.InferenceSession(
+    os.path.join(MODELS_DIR, "efficientnet.onnx"),
+    providers=["CPUExecutionProvider"],
+)
+input_name = ort_session.get_inputs()[0].name
+svm_pipeline = joblib.load(os.path.join(MODELS_DIR, "crop_disease_svm.pkl"))
+class_names = joblib.load(os.path.join(MODELS_DIR, "class_names.pkl"))
+
+
+def predict_crop(img: Image.Image) -> dict:
+  if img is None:
+    return {}
+  resized = img.convert("RGB").resize((224, 224))
+  arr = np.asarray(resized, dtype=np.float32) / 255.0
+  inp = np.expand_dims(arr, axis=0)
+  features = ort_session.run(None, {input_name: inp})[0]
+  probs = svm_pipeline.predict_proba(features)[0]
+  return {str(class_names[i]): float(probs[i]) for i in range(len(class_names))}
+
 
 demo = gr.Interface(
-    fn=predict_crop_disease,
-    inputs=gr.Image(type="pil", label="ফসলের পাতার ছবি আপলোড করুন"),
-    outputs=gr.Textbox(label="ফলাফল"),
+    fn=predict_crop,
+    inputs=gr.Image(type="pil", label="Upload Leaf Image"),
+    outputs=gr.Label(num_top_classes=3, label="Predictions"),
     title="Crop Disease Detection",
-    description="ধান, আলু ও ভুট্টার পাতার রোগ শনাক্তকরণ (EfficientNetB0 + SVM)",
+    description="EfficientNetB0 (ONNX) + StandardScaler + RBF SVM",
 )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0",
-                server_port=int(os.environ.get("PORT", 7860)))
+  port = int(os.environ.get("PORT", 7860))
+  demo.launch(server_name="0.0.0.0", server_port=port)
